@@ -6,9 +6,9 @@
             <meta http-equiv="X-UA-Compatible" content="IE=edge">
             <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-            <title>DIDComm Messaging Protocol - Implementers Guide</title>
-            <link href="../../spec-up/compiled/head.css" rel="stylesheet"/>
-                <script src="../../spec-up/compiled/head.js"></script>
+            <title>DIDComm Messaging - Implementers Guide</title>
+            <link href="../spec-up/compiled/head.css" rel="stylesheet"/>
+                <script src="../spec-up/compiled/head.js"></script>
           </head>
           <body features="source logo">
             
@@ -146,6 +146,35 @@
 <p>Note how this breaks the simple assumptions of pure request-response technologies like HTTP, that assume the channel in (request) is also the channel out (response). <a href="https://en.wikipedia.org/wiki/Duplex_%28telecommunications%29">Duplex</a> request-response can be modeled with DIDComm, but doing so requires support that may not always be available, plus cooperative behavior governed by the <a href="https://github.com/hyperledger/aries-rfcs/blob/master/features/0008-message-id-and-threading/README.md"><code>~thread</code></a> decorator.</p>
 <h3 id="routing-protocol"><a class="toc-anchor" href="#routing-protocol">§</a> Routing Protocol</h3>
 <p>Now that we understand mediators and relays, how and why they might be combined in various ways, and how their presence influences delivery semantics, we can describe the actual application-level routing protocol that any DIDComm sender speaks with a destward mediator. See [Routing Protocol] in the spec.</p>
+<h2 id="whats-new"><a class="toc-anchor" href="#whats-new">§</a> What’s New?</h2>
+<p>The version of DIDComm incubated in the Hyperledger Aries community is referred to as Version 1 (V1). This spec describes the next version, referred to as Version 2 (V2). This section will describe the changes between V1 and V2, useful to members of the Aries community.</p>
+<h3 id="summary-of-changes"><a class="toc-anchor" href="#summary-of-changes">§</a> Summary of Changes</h3>
+<ul>
+<li>Formalization of methods used in V1
+<ul>
+<li>JWM based envelope</li>
+<li>ECDH-1PU standardized form of AuthCrypt</li>
+</ul>
+</li>
+<li>Both DID and key in each message</li>
+<li>Special Handling of Peer DIDs eliminated</li>
+<li>Message structure split between ‘headers’ and body.</li>
+<li>No AnonCrypt encryption method.</li>
+</ul>
+<h3 id="practical-changes"><a class="toc-anchor" href="#practical-changes">§</a> Practical Changes</h3>
+<p>The list of changes above leads to practical changes in how DIDComm is used.</p>
+<h4 id="did-exchange-not-needed"><a class="toc-anchor" href="#did-exchange-not-needed">§</a> DID Exchange not needed</h4>
+<p>Each message contains both the sender key (used in the encryption layer), and the sender’s DID. The exchange of DIDs that occurs via the DID Exchange Protocol used in V1 occurs in each message that is transferred. The important step of rotating DIDs is accomplished via the <code>from_prior</code> header that travels alongside any protocol message. These features make the DID Exchange Protocol redundant.</p>
+<p>One side effect of the DID Exchange Protocol in V1 was that you confirmed the validity of the DID with a round trip to the other party. Many protocols will provide this assurance via the flow of the protocol prior to the point where round-trip testing is required. When this round-trip is desired prior to the beginning of a protocol, a round trip with another protocol (such as Trust Ping or Feature Discovery) can provide the same assurance.</p>
+<h4 id="process-from-headers-prior-to-protocol-processing"><a class="toc-anchor" href="#process-from-headers-prior-to-protocol-processing">§</a> Process From Headers prior to Protocol Processing</h4>
+<p>Relationship changes in V1 were handled inside the DID Exchange Protocol. In V2, relationship changes including discovery and rotation are handled in message headers.</p>
+<p>In V2, messages must evaluate the <code>from</code> and <code>from_prior</code> headers of every message prior to beginning the protocol message processing.</p>
+<h4 id="no-technical-difference-between-ephemeral-mode-and-full-mode"><a class="toc-anchor" href="#no-technical-difference-between-ephemeral-mode-and-full-mode">§</a> No technical difference between Ephemeral Mode and Full Mode</h4>
+<p>Ephemeral mode in V1 was a method of passing messages without first performing an exchange of DIDs. Given that we no longer have a need to perform an exchange of DIDs prior to passing messages of another protocol, we no longer need to designate a mode for ephemeral interactions.</p>
+<h4 id="use-peer-dids-or-other-suitable-did-method-in-place-of-anoncrypt"><a class="toc-anchor" href="#use-peer-dids-or-other-suitable-did-method-in-place-of-anoncrypt">§</a> Use Peer DIDs (or other suitable DID method) in place of AnonCrypt</h4>
+<p>Anoncrypt was a method present in V1 that allowed a message to be encrypted to a recipient using ephemeral sender keys, allowing the sender to remain anonymous. The ease of using Peer DIDs allows the sender to remain anonymous using the existing authenticated encryption method. The encryption properties are the same between the methods. Eliminating this option makes the spec simpler without loosing any features.</p>
+<h4 id="message-level-decorators-now-represented-as-headers"><a class="toc-anchor" href="#message-level-decorators-now-represented-as-headers">§</a> Message Level Decorators now represented as Headers</h4>
+<p>The adjusted structure of DIDComm messages now represents message level decorators as message headers. An example includes <code>thread_id</code>.</p>
 
               </article>    
 
@@ -196,6 +225,20 @@
 <li><a href="#routing-protocol">Routing Protocol</a></li>
 </ul>
 </li>
+<li><a href="#whats-new">What’s New?</a>
+<ul>
+<li><a href="#summary-of-changes">Summary of Changes</a></li>
+<li><a href="#practical-changes">Practical Changes</a>
+<ul>
+<li><a href="#did-exchange-not-needed">DID Exchange not needed</a></li>
+<li><a href="#process-from-headers-prior-to-protocol-processing">Process From Headers prior to Protocol Processing</a></li>
+<li><a href="#no-technical-difference-between-ephemeral-mode-and-full-mode">No technical difference between Ephemeral Mode and Full Mode</a></li>
+<li><a href="#use-peer-dids-or-other-suitable-did-method-in-place-of-anoncrypt">Use Peer DIDs (or other suitable DID method) in place of AnonCrypt</a></li>
+<li><a href="#message-level-decorators-now-represented-as-headers">Message Level Decorators now represented as Headers</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
                 </div>
@@ -204,7 +247,7 @@
             </slide-panels>
 
           </body>
-          <script>window.specConfig = {"title":"DIDComm Messaging Protocol - Implementers Guide","logo":"https://rawcdn.githack.com/decentralized-identity/decentralized-identity.github.io/a3ca39717e440302d1fd99a796e7f00e1c42eb2d/images/logo-flat.svg","logo_link":"https://identity.foundation","source":{"host":"github","account":"decentralized-identity","repo":"didcomm-messaging"},"output_path":"./docs/guide","spec_directory":"./guide/","markdown_paths":["intro.md","routing.md"],"destination":"./docs/guide/","rootResourcePrefix":"./docs/spec/","destinationResourcePrefix":"../../"}</script>
-          <script src="../../spec-up/compiled/body.js" data-manual></script>
+          <script>window.specConfig = {"title":"DIDComm Messaging - Implementers Guide","logo":"https://rawcdn.githack.com/decentralized-identity/decentralized-identity.github.io/a3ca39717e440302d1fd99a796e7f00e1c42eb2d/images/logo-flat.svg","logo_link":"https://identity.foundation","source":{"host":"github","account":"decentralized-identity","repo":"didcomm-messaging"},"output_path":"./docs/guide","spec_directory":"./guide/","markdown_paths":["intro.md","routing.md","whatsnew.md"],"destination":"./docs/guide/","rootResourcePrefix":"./docs/","destinationResourcePrefix":"../"}</script>
+          <script src="../spec-up/compiled/body.js" data-manual></script>
         </html>
       
