@@ -99,10 +99,37 @@
 <li>Message-oriented, with sender and receiver(s)</li>
 <li>Encryption Envelope</li>
 </ul>
-<h2 id="message-structure"><a class="toc-anchor" href="#message-structure">§</a> Message Structure</h2>
-<p>DIDComm Messages are based on JWM (JSON Web Messages). A message has a basic structure that specifies the message type, id, and other attributes common to all messages. These common attributes appear at the top level of a DIDComm message, and are called headers. A message also includes attributes specific to the message type. Type specific message attributes are contained within the <code>body</code> attribute of a message.</p>
-<p>Prior to being sent to a recipient, the JWM is encrypted into a JWE according to the JWM spec.</p>
-<p>The following example shows common elements of a DIDComm Message. Further details and advanced usage are covered elsewhere in this spec.</p>
+<h2 id="message-types"><a class="toc-anchor" href="#message-types">§</a> Message Types</h2>
+<p>This spec discusses messages in three different formats. The casual phrase “DIDComm message” is ambiguous, but usually refers to DIDComm encrypted messages (the outermost box in the diagram below). These will constitute the vast majority of network traffic in most DIDComm deployments, and they are responsible for security guarantees in the system. However, the role of encrypted messages cannot be understood without reference to the simpler formats they contain.</p>
+<p><img src="collateral/didcomm-envelopes.png" alt="DIDComm envelopes"></p>
+<h3 id="didcomm-plaintext-messages"><a class="toc-anchor" href="#didcomm-plaintext-messages">§</a> DIDComm Plaintext Messages</h3>
+<p>A DIDComm message in its plaintext form, not packaged into any protective envelope, is known as a <strong>DIDComm plaintext message</strong>. Plaintext messages lack confidentiality and integrity guarantees, and are repudiable. They are therefore not normally transported across security boundaries. However, this may be a helpful format to inspect in debuggers, since it exposes underlying semantics, and it is the format used in this spec to give examples of headers and other internals. Depending on ambient security, plaintext may or may not be an appropriate format for DIDComm data at rest.</p>
+<p>When higher-level protocols are built atop DIDComm, applications remove the protective envelope(s) and process the plaintext that’s inside. Specs for higher-level protocols typically document message structure and provide examples in this format; protective envelopes are assumed but ignored as a low-level detail.</p>
+<p>Applications running one or more DIDComm-based protocols may wish to define their own media types for the protocols they support. Absent such customization, the preferred media type for a generic DIDComm plaintext message SHOULD be <code>application/didcomm-plain+json</code>. This correctly conveys the fact that code handling such content functions at a different level from DIDComm’s security and routing, and that generic JSON tools and actions are likely to be a helpful fallback in processing the content.</p>
+<p>DIDComm plaintext messages are also correctly understood as JWM content (see <a href="#plaintext-message-structure">Plaintext Message Structure</a>, below). Thus a media type for JWMs MIGHT be an accurate but more generic way to categorize them. However, not all JWMs are DIDComm messages, so this categorization is suboptimal. Similarly, <code>application/json</code> is true, but overly generic and therefore not recommended.</p>
+<p>When persisted as a file or attached as a payload in other contexts, the file extension for DIDComm plaintext messages SHOULD be <code>dcpm</code>, giving a globbing pattern of <code>*.dcpm</code>; this SHOULD be be read as “Star Dot D C P M” or as “D C P M” files. We imagine people will reference this media type by saying, “I am looking at a DIDComm Plaintext Message file”, or “This database record is in DIDComm Plaintext format”, or “Does my editor have a DIDComm Plaintext Message plugin?” A possible icon for this file format depicts green JSON text in a message bubble (<a href="collateral/dcpm.svg">svg</a> | <a href="collateral/dcpm-256.png">256x256</a> | <a href="collateral/dcpm-128.png">128x128</a> | <a href="collateral/dcpm-64.png">64x64</a>):</p>
+<p><img src="collateral/dcpm-128.png" alt="DIDComm Plaintext Message Icon"></p>
+<h3 id="didcomm-signed-message"><a class="toc-anchor" href="#didcomm-signed-message">§</a> DIDComm Signed Message</h3>
+<p>A <strong>DIDComm signed message</strong> is a JWS envelope that associates a non-repudiable signature with the plaintext message inside it.</p>
+<p>Signed messages are not necessary to provide message integrity (tamper evidence), or to prove the sender to the recipient. Both of these guarantees automatically occur with the authenticated encryption in DIDComm encrypted messages. Signed messages are only necessary when the origin of plaintext must be provable to third parties, or when the sender can’t be proven to the recipient by authenticated encryption because the recipient is not known in advance (e.g., in a broadcast scenario). Adding a signature when one is not needed <a href="https://github.com/hyperledger/aries-rfcs/blob/master/concepts/0049-repudiation/README.md#summary">can degrade rather than enhance security because it relinquishes the sender’s ability to speak off the record</a>. We therefore expect signed messages to be used in a few cases, but not as a matter of course.</p>
+<p>When a message is <em>both</em> signed and encrypted, the plaintext is signed, and then the signed envelope is encrypted. The opposite order is not used, since it would imply that the signer committed to opaque data (which is unsafe and undermines non-repudiation).</p>
+<p>The <a href="https://tools.ietf.org/html/rfc6838">media type</a> of a DIDComm signed message SHOULD be <code>application/didcomm-signed+json</code>.</p>
+<p>Because a DIDComm signed message is also a JWS, a true but less specific media type MIGHT be <code>application/jose</code>. (Although <code>application/jwt</code> is a registered media type, <code>application/jwe</code> and <code>application/jws</code> <a href="https://tools.ietf.org/html/rfc7516#section-9">are not</a>. This is <a href="https://mailarchive.ietf.org/arch/msg/jose/FRTPwiOLOc5DILfY_QFZyemn9VU/">deliberate</a>.) Using the more generic type is not recommended, as content categorized in this way is unlikely to get the DIDComm-specific handling it needs. Similarly, it is also true but overly generic and therefore not recommended to describe a DIDComm signed message as <code>application/json</code>.</p>
+<p>When persisted as a file or attached as a payload in other contexts, the file extension for DIDComm signed messages SHOULD be <code>dcsm</code>, giving a globbing pattern of <code>*.dcsm</code>; this SHOULD be be read as “Star Dot D C S M” or as “D C S M” files. A possible icon for this media type depicts a signed envelope (<a href="collateral/dcsm.svg">svg</a> | <a href="collateral/dcsm-256.png">256x256</a> | <a href="collateral/dcsm-128.png">128x128</a> | <a href="collateral/dcsm-64.png">64x64</a>):</p>
+<p><img src="collateral/dcsm-128.png" alt="DIDComm Signed Message Icon"></p>
+<h3 id="didcomm-encrypted-message"><a class="toc-anchor" href="#didcomm-encrypted-message">§</a> DIDComm Encrypted Message</h3>
+<p>A <strong>DIDComm encrypted message</strong> hides its content from all but authorized recipients, discloses and proves the sender to exactly and only those recipients, and provides integrity guarantees. It is important in privacy-preserving routing. It is what normally moves over network transports in DIDComm applications, and is the safest format for storing DIDComm data at rest.</p>
+<p>The <a href="https://tools.ietf.org/html/rfc6838">media type</a> of a DIDComm encrypted message SHOULD be <code>application/didcomm-encrypted+json</code>.</p>
+<blockquote>
+<p>Note: If future versions of this spec allow binary encodings, variations like <code>application/didcomm-encrypted+cbor</code> (see <a href="https://tools.ietf.org/html/rfc7049#section-7.5">CBOR RFC 7049, section 7.5</a>), <code>application/didcomm-encrypted+msgpack</code>, or <code>application/didcomm-encrypted+protobuf</code> may become reasonable. Future DIDComm specs that encompass comm patterns other than messaging — DIDComm multicast or DIDComm streaming, for example — might use a suffix: <code>application/didcomm-encrypted-multicast</code> or similar.</p>
+</blockquote>
+<p>Because a DIDComm encrypted message is also a JWE, a true but less specific media type MIGHT be <code>application/jose</code>. Note how this overlaps with the generic media type of the JWS of a DIDComm Signed Message. As with DIDComm signed Messages, using more generic media types is ambiguous and not recommended.</p>
+<p>When persisted as a file or attached as a payload in other contexts, the file extension for DIDComm encrypted messages SHOULD be <code>dcem</code>, giving a globbing pattern of <code>*.dcem</code>; this SHOULD be be read as “Star Dot D C E M” or as “D C E M” files. A possible icon for this file format depicts an envelope with binary overlay, protected by a lock (<a href="collateral/dcem.svg">svg</a> | <a href="collateral/dcem-256.png">256x256</a> | <a href="collateral/dcem-128.png">128x128</a> | <a href="collateral/dcem-64.png">64x64</a>):</p>
+<p><img src="collateral/dcem-128.png" alt="DIDComm Encrypted Message Icon"></p>
+<h2 id="plaintext-message-structure"><a class="toc-anchor" href="#plaintext-message-structure">§</a> Plaintext Message Structure</h2>
+<p>DIDComm plaintext messages are based on <a href="https://tools.ietf.org/html/draft-looker-jwm-01">JWM (JSON Web Messages)</a>. A message has a basic structure that specifies the message type, id, and other attributes common to all messages. These common attributes appear at the top level of a DIDComm message, and are called headers. A message also includes attributes specific to the message type. Type specific message attributes are contained within the <code>body</code> attribute of a message.</p>
+<p>Prior to being sent to a recipient, the JWM is usually encrypted into a JWE according to the JWM spec.</p>
+<p>The following example shows common elements of a plaintext message. Further details and advanced usage are covered elsewhere in this spec.</p>
 <pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
     <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"1234567890"</span><span class="token punctuation">,</span>
     <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"&lt;message-type-uri>"</span><span class="token punctuation">,</span>
@@ -116,18 +143,26 @@
 <span class="token punctuation">}</span>
 </code></pre>
 <h3 id="message-headers"><a class="toc-anchor" href="#message-headers">§</a> Message Headers</h3>
-<p>The attributes of a DIDComm Message at the level of its outer packaging (effectively, the “headers” of the message) are as follows:</p>
+<p>The predefined attributes of a DIDComm Message at the level of its outer packaging (effectively, the “headers” of the message) are as follows:</p>
 <ul>
 <li><strong>id</strong> - REQUIRED. Message ID. The <code>id</code> attribute value MUST be unique to the sender.</li>
 <li><strong>type</strong> - REQUIRED. Message Type. The <code>type</code> attribute value MUST be a valid <a href="protocols.md#message-type-uri">Message Type URI</a> , that when resolved gives human readable information about the message. The attributes value also informs the content of the message, for example the presence of other attributes and how they should be processed.</li>
-<li><strong>to</strong> - OPTIONAL. Recipient(s) identifier. The <code>to</code> attribute MUST be an array of strings where each element is a valid <a href="https://w3c.github.io/did-core/#generic-did-syntax">DID</a> which identifies the recipients of the message.</li>
-<li><strong>from</strong> - OPTIONAL. Sender identifier. The <code>from</code> attribute MUST be a string that is a valid <a href="https://w3c.github.io/did-core/#generic-did-syntax">DID</a> which identifies the sender of the message. For DID methods that use query parameters to carry additional information, they might also be present in the from string. When a message is encrypted, the sender key MUST be authorized for encryption by this DID. Authorization of the encryption key for this DID MUST be verified by message recipient with the proper proof purposes. See the <a href="#Message-Authentication">message authentication</a> section for additional details.</li>
+<li><strong>to</strong> - OPTIONAL. Recipient(s) identifier. The <code>to</code> attribute MUST be an array of strings where each element is a valid <a href="https://w3c.github.io/did-core/#did-url-syntax">DID URL</a> without the <a href="https://w3c.github.io/did-core/#fragment">Fragment component</a> which identifies the recipients of the message.</li>
+<li><strong>from</strong> - OPTIONAL. Sender identifier. The <code>from</code> attribute MUST be a string that is a valid <a href="https://w3c.github.io/did-core/#did-url-syntax">DID URL</a> without the <a href="https://w3c.github.io/did-core/#fragment">Fragment component</a> which identifies the sender of the message. When a message is encrypted, the sender key MUST be authorized for encryption by this DID. Authorization of the encryption key for this DID MUST be verified by message recipient with the proper proof purposes. See the <a href="#Message-Authentication">message authentication</a> section for additional details.</li>
 <li><strong>created_time</strong> - OPTIONAL. Message Created Time. The <code>created_time</code> attribute is used for the sender to express when they created the message, expressed in UTC Epoch Seconds (seconds since 1970-01-01T00:00:00Z UTC) [link](1970-01-01T00:00:00Z UTC). This attribute is informative to the recipient, and may be relied on by protocols.</li>
 <li><strong>expires_time</strong> - OPTIONAL. Message Expired Time. The <code>expires_time</code> attribute is used for the sender to express when they consider the message to be expired, expressed in UTC Epoch Seconds (seconds since 1970-01-01T00:00:00Z UTC) [link](1970-01-01T00:00:00Z UTC). This attribute signals when the message is no longer valid, and is to be used by the recipient to discard expired messages on receipt.</li>
 </ul>
-<p>The problem domain of DIDComm intersects with other aspects of decentralized identity, where JSON-LD plays a role in some standards. Thus it may be natural to wonder about DIDComm’s relationship to JSON-LD and to the rich semantics and extensibility features it offers. The short answer is that DIDComm is not dependent on JSON-LD, but it is compatible with it. We expect these two technologies to remain mostly orthogonal.</p>
 <p>In the outer packaging of message metadata, DIDComm follows the extensibility pattern established by the JW* family of standards. (It also emulates the design of message headers in SMTP, request headers in HTTP, and labels on physical pieces of mail.) A modest inventory of predefined “header” fields is specified, as shown above. Additional fields with unreserved names can be added at the discretion of producers and consumers of messages; any software that doesn’t understand such fields should ignore them and MUST NOT fail because of their inclusion in a message. This is appropriate for a simple, flat data model.</p>
 <p>Aligning with <a href="https://tools.ietf.org/html/rfc6648.html">RFC 6648</a>, DIDComm explicitly rejects the <code>X-*</code> headers convention that creates divergent pseudo-standards; if a new header needs broad support, it must be standardized properly. Alternatively, a JSON-LD <code>@context</code> header can be added, providing namespacing for fields other than those predefined in the spec. Since we expect header fields to be small in number and modest in complexity, we expect this sort of powerful extensibility to be unnecessary in most cases.</p>
+<h4 id="simple-vs-structured"><a class="toc-anchor" href="#simple-vs-structured">§</a> Simple vs. Structured</h4>
+<p>Headers can be simple (mapping a header name to an integer or a string) or structured (mapping a header name to JSON substructure – an array or JSON object). When defining a new header type, the following guidelines apply:</p>
+<ul>
+<li>Headers SHOULD NOT use more structure than necessary; simple headers are preferred.</li>
+<li>However, a header value SHOULD NOT require interpretation over and above ordinary JSON parsing. Prefer JSON structure to specialized string DSLs like the one that encodes media type preferences in an HTTP <code>Accept</code> header. (<a href="https://tools.ietf.org/html/draft-ietf-httpbis-header-structure-15">HTTP Structured Headers</a> provide similar functionality but are unnecessary here, since DIDComm plaintext already has an easily parseable syntax.)</li>
+<li>Headers that are only meaningful together SHOULD be grouped into a JSON object.</li>
+</ul>
+<h4 id="relationship-to-json-ld"><a class="toc-anchor" href="#relationship-to-json-ld">§</a> Relationship to JSON-LD</h4>
+<p>The problem domain of DIDComm intersects with other aspects of decentralized identity, where JSON-LD plays a role in some standards. Thus it may be natural to wonder about DIDComm’s relationship to JSON-LD and to the rich semantics and extensibility features it offers. The short answer is that DIDComm is not dependent on JSON-LD, but it is compatible with it. We expect these two technologies to remain mostly orthogonal.</p>
 <p>The body of a message – everything inside the <code>body</code> object – is different. Here, there is substantial variety and complexity. Structures may be sophisticated graphs, represented with nested objects and arrays. JSON-LD is not required at this level, either. However, it is available, and may be appropriate for certain use cases where extensibility is an important feature. JSON-LD usage, if it occurs, SHOULD be a declared feature of a protocol as a whole, not an ad hoc extension to arbitrary individual messages, and MUST be signalled by the inclusion of a <code>@context</code> inside <code>body</code>. Unless a protocol declares a JSON-LD dependency, the same rules apply to JSON-LD-isms as apply to any other unrecognized structure in a DIDComm message: additional fields can be added to any part of message structure, should be ignored if not understood, and MUST NOT be the basis of failure by recipients.</p>
 <h3 id="did-rotation"><a class="toc-anchor" href="#did-rotation">§</a> DID Rotation</h3>
 <p>DIDComm is based on DIDs and their associated DID Documents. Changes to keys and endpoints are the concern of each DID method and are utilized but not managed by DIDComm. DID Rotation serves a very specific and narrow need to switch from one DID method to another. This is very common at the beginning of a new DIDComm relationship when a public DID or a temporary DID passed unencrypted is rotated out for a DID chosen for the relationship. As rotation between one DID and another is outside the scope of any DID method, the details of DID Rotation are handled within DIDComm itself.</p>
@@ -149,11 +184,11 @@
 <span class="token punctuation">}</span>
 </code></pre>
 <p><strong>Payload</strong>:</p>
-<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
-  <span class="token property">"sub"</span><span class="token operator">:</span> <span class="token string">"&lt;new DID URI>"</span><span class="token punctuation">,</span>
-  <span class="token property">"iss"</span><span class="token operator">:</span> <span class="token string">"&lt;prior DID URI>"</span><span class="token punctuation">,</span>
-  <span class="token property">"iat"</span><span class="token operator">:</span> <span class="token number">1516239022</span> <span class="token comment">//datetime of the rotation, not message</span>
-<span class="token punctuation">}</span>
+<pre class="language-jsonc"><code class="language-jsonc">{
+  &quot;sub&quot;: &quot;&lt;new DID URI&gt;&quot;,
+  &quot;iss&quot;: &quot;&lt;prior DID URI&gt;&quot;,
+  &quot;iat&quot;: 1516239022 //datetime of the rotation, not message
+}
 </code></pre>
 <h4 id="example-message-rotating-did"><a class="toc-anchor" href="#example-message-rotating-did">§</a> Example Message Rotating DID</h4>
 <pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
@@ -165,7 +200,7 @@
     <span class="token property">"created_time"</span><span class="token operator">:</span> <span class="token number">1516269022</span><span class="token punctuation">,</span>
     <span class="token property">"expires_time"</span><span class="token operator">:</span> <span class="token number">1516385931</span><span class="token punctuation">,</span>
     <span class="token property">"body"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
-    	<span class="token property">"messagespecificattribute"</span><span class="token operator">:</span> <span class="token string">"and it's value"</span>
+    	<span class="token property">"messagespecificattribute"</span><span class="token operator">:</span> <span class="token string">"and its value"</span>
 	<span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
@@ -174,10 +209,10 @@
 <li>This rotation method does not cover cases where a multi-sig is required. Rotations with such requirements should use a more expressive protocol.</li>
 <li>This rotation method only supports the case where a new DID is used, replacing an old DID which is no longer used. Adjustments to DIDs used between different parties that does not fit this narrow use should use a more expressive protocol.</li>
 </ul>
-<h2 id="message-encryption"><a class="toc-anchor" href="#message-encryption">§</a> Message Encryption</h2>
+<h1 id="message-encryption"><a class="toc-anchor" href="#message-encryption">§</a> Message Encryption</h1>
 <p>DIDComm supports two types of message encryption: Authenticated Sender Encryption and Anonymous Sender Encryption. Both forms are encrypted to the recipient, but only Authenticated Sender Encryption provides assurances of who the sender is.</p>
 <p>The encrypted form of a JWM is a JWE. The JOSE family defines <a href="https://tools.ietf.org/html/rfc7518">JSON Web Algorithms</a> (JWAs) which standardize certain cryptographic operations that are related to preparing JOSE structures. For the purposes of interoperability, DIDComm messaging does not support all JWAs, rather it takes a subset of the supported algorithms that are applicable for the following cases around secure messaging. These supported algorithms are listed here.</p>
-<h3 id="sender-authenticated-encryption"><a class="toc-anchor" href="#sender-authenticated-encryption">§</a> Sender Authenticated Encryption</h3>
+<h2 id="sender-authenticated-encryption"><a class="toc-anchor" href="#sender-authenticated-encryption">§</a> Sender Authenticated Encryption</h2>
 <p>When a sender would like to encrypt a message for a recipient or multiple recipients and also be authenticated such that the recipients can determine they were the party that encrypted the message, the JWA of <code>ECDH-1PU</code> defined by <a href="https://tools.ietf.org/html/draft-madden-jose-ecdh-1pu-03">draft</a> SHOULD be used within the structure of a JWE.</p>
 <p>For the keys involved in key agreement, the following elliptic curves MUST be supported.</p>
 <table>
@@ -218,7 +253,7 @@
 </tbody>
 </table>
 <p>TODO: Include language about safe nonce considerations.</p>
-<h3 id="anonymous-encryption"><a class="toc-anchor" href="#anonymous-encryption">§</a> Anonymous Encryption</h3>
+<h2 id="anonymous-encryption"><a class="toc-anchor" href="#anonymous-encryption">§</a> Anonymous Encryption</h2>
 <p>When a sender would like to encrypt a message for a recipient or multiple recipients but not be authenticated by the recipients as the party who encrypted the message, the JWA of <code>ECDH-ES</code> defined by <a href="https://tools.ietf.org/html/rfc7518#section-4.6">RFC 7518</a> SHOULD be used within the structure of a JWE.</p>
 <p>For the keys involved in key agreement, the following elliptic curves MUST be supported.</p>
 <table>
@@ -259,7 +294,7 @@
 </tbody>
 </table>
 <p>TODO: Include language about safe nonce considerations.</p>
-<h3 id="key-wrapping-algorithms"><a class="toc-anchor" href="#key-wrapping-algorithms">§</a> Key Wrapping Algorithms</h3>
+<h2 id="key-wrapping-algorithms"><a class="toc-anchor" href="#key-wrapping-algorithms">§</a> Key Wrapping Algorithms</h2>
 <table>
 <thead>
 <tr>
@@ -320,7 +355,9 @@
 </tr>
 </tbody>
 </table>
-<h3 id="examples"><a class="toc-anchor" href="#examples">§</a> Examples</h3>
+<h2 id="perfect-forward-secrecy"><a class="toc-anchor" href="#perfect-forward-secrecy">§</a> Perfect Forward Secrecy</h2>
+<p>Due to the triple Key Derivation algorithm used in ECDH-1PU, all messages sent via DIDComm have weak perfect forward secrecy without any additional security added by the transport layer. In ECDH-1PU this is achieved by encrypting the content encryption key with the output of the hash of the Ze (ECDH of ephemeral key and recipient static key) and Zs (ECDH of static sender key and recipient static key). With Ze bringing the changed derived secret in each message and Zs bringing the repudiable authenticity of each message, the resulting Z (hash of Ze and Zs) carries the properties of weak perfect forward secrecy and repudiable authenticity for each message as well.</p>
+<h2 id="examples"><a class="toc-anchor" href="#examples">§</a> Examples</h2>
 <p>While the details of encrypting a JWM into a JWE are included in the <a href="https://tools.ietf.org/html/draft-looker-jwm-01">JWM spec</a>, a few examples are included here for clarity.</p>
 <p>TODO: Add examples here</p>
 <h2 id="message-signing"><a class="toc-anchor" href="#message-signing">§</a> Message Signing</h2>
@@ -963,26 +1000,22 @@ gains by virtue of the properties of the DIDComm messages. A ping and response v
 <li>Usage</li>
 </ul>
 <h2 id="future-proofing"><a class="toc-anchor" href="#future-proofing">§</a> Future-Proofing</h2>
-<ul>
-<li>
-<p>Versioning of the standard</p>
-</li>
-<li>
-<p>Extensibility</p>
-</li>
-<li>
-<p>Adapting for post-quantum crypto</p>
-</li>
-</ul>
+<h3 id="versioning"><a class="toc-anchor" href="#versioning">§</a> Versioning</h3>
+<p>This version of the standard is known as “DIDComm v2” — acknowledging the fact that a <a href="https://github.com/hyperledger/aries-rfcs/blob/master/concepts/0005-didcomm/README.md">v1 generation of DIDComm specs</a> was incubated under the Hyperledger Aries project umbrella. The v1 specs are close conceptual cousins, but use a slightly different encryption envelope, and base their plaintext format on arbitrary JSON instead of JWMs.</p>
+<p>Future evolutions of the spec will follow <a href="https://semver.org">semver</a> conventions. Minor updates that add features without breaking compatibility will carry a minor version number update: 2.1, 2.2, and so forth. Breaking changes will prompt a major version change.</p>
 <h3 id="extensions"><a class="toc-anchor" href="#extensions">§</a> Extensions</h3>
-<p>The general mechanism for DIDComm extensibility is the development of
-DIDComm protocols. In the case where extensibility requires a modification
-to the base DIDComm spec itself, a DIDComm Extension is to be used.</p>
-<p>Each DIDComm Extension is described in a specification. Software that
-implements a DIDComm Extension in addition to the DIDComm spec will
-indicate so via link to the extension spec.</p>
-<h3 id="encoding"><a class="toc-anchor" href="#encoding">§</a> Encoding</h3>
-<p>DIDComm Messages are JSON encoded (based on the JOSE family of specs) at the encryption, signature, and content level. Future encodings MUST specify a deterministic and reliable method for indicating the alternative encoding used.</p>
+<p>The general mechanism for DIDComm extensibility is the development of DIDComm protocols. In the case where extensibility requires a modification to the base DIDComm spec itself, a DIDComm extension is to be used. An extension adds a self-contained set of conventions or features. Support for DIDComm extensions is optional.</p>
+<p>Each DIDComm extension is described in a specification of its own. Software that implements a DIDComm Extension in addition to the DIDComm spec will indicate so via link to the extension spec.</p>
+<h3 id="future-work"><a class="toc-anchor" href="#future-work">§</a> Future Work</h3>
+<h4 id="additional-encodings"><a class="toc-anchor" href="#additional-encodings">§</a> Additional Encodings</h4>
+<p>DIDComm Messages are JSON encoded (based on the JOSE family of specs) at the encryption, signature, and content level. Future encodings might introduce binary serializations. Each innovation like this MUST specify a deterministic and reliable method for indicating the alternative encoding used.</p>
+<h3 id="beyond-messaging"><a class="toc-anchor" href="#beyond-messaging">§</a> Beyond Messaging</h3>
+<p>This is a DIDComm <em>messaging</em> spec. Security, privacy, routing, and metadata concepts from this spec could be adapted to other communication styles, including multicast/broadcast and streaming. This will create sister specs to DIDComm Messaging, rather than evolving DIDComm Messaging itself.</p>
+<h3 id="post-quantum-crypto"><a class="toc-anchor" href="#post-quantum-crypto">§</a> Post-Quantum Crypto</h3>
+<p>The designers of DIDComm are aware that DIDComm’s cryptographic methods will need to be upgraded when quantum computing matures. This is because DIDComm makes heavy use of asymmetric elliptic curve mechanisms that depend on the discrete logarithm problem; this computational hardness is likely to be vulnerable to quantum cracking. Similar risks will drive upgrades to TLS, Ethereum, Bitcoin, and many other systems that are considered highly secure today.</p>
+<p>Some modest preparations for quantum-resistant DIDComm have already begun. DIDComm is able to use arbitrary DID methods, which should allow approaches that are quantum-secure without changing the general pattern of DIDComm’s interaction with key management technology.</p>
+<p>Libraries that provide quantum-resistant algorithms for signing and encryption are now available, but research is needed to determine which approaches are worthy of broad adoption. This is the subject of <a href="https://csrc.nist.gov/projects/post-quantum-cryptography">an ongoing project sponsored by NIST</a>, and of <a href="https://ec.europa.eu/digital-single-market/en/news/future-quantum-eu-countries-plan-ultra-secure-communication-network">a similar project in the EU</a>.</p>
+<p>We expect to update the DIDComm Messaging spec as these projects release mature recommendations and the cryptographic libraries they vet achieve adoption. It is not yet clear whether this will require a breaking change to DIDComm’s encryption envelope or signing formats.</p>
 <h2 id="references"><a class="toc-anchor" href="#references">§</a> References</h2>
 <ul>
 <li>DID spec</li>
@@ -1026,9 +1059,21 @@ indicate so via link to the extension spec.</p>
 <li><a href="#processing-model">Processing Model</a></li>
 </ul>
 </li>
-<li><a href="#message-structure">Message Structure</a>
+<li><a href="#message-types">Message Types</a>
 <ul>
-<li><a href="#message-headers">Message Headers</a></li>
+<li><a href="#didcomm-plaintext-messages">DIDComm Plaintext Messages</a></li>
+<li><a href="#didcomm-signed-message">DIDComm Signed Message</a></li>
+<li><a href="#didcomm-encrypted-message">DIDComm Encrypted Message</a></li>
+</ul>
+</li>
+<li><a href="#plaintext-message-structure">Plaintext Message Structure</a>
+<ul>
+<li><a href="#message-headers">Message Headers</a>
+<ul>
+<li><a href="#simple-vs-structured">Simple vs. Structured</a></li>
+<li><a href="#relationship-to-json-ld">Relationship to JSON-LD</a></li>
+</ul>
+</li>
 <li><a href="#did-rotation">DID Rotation</a>
 <ul>
 <li><a href="#jwt-details">JWT Details</a></li>
@@ -1038,14 +1083,11 @@ indicate so via link to the extension spec.</p>
 </li>
 </ul>
 </li>
-<li><a href="#message-encryption">Message Encryption</a>
-<ul>
 <li><a href="#sender-authenticated-encryption">Sender Authenticated Encryption</a></li>
 <li><a href="#anonymous-encryption">Anonymous Encryption</a></li>
 <li><a href="#key-wrapping-algorithms">Key Wrapping Algorithms</a></li>
+<li><a href="#perfect-forward-secrecy">Perfect Forward Secrecy</a></li>
 <li><a href="#examples">Examples</a></li>
-</ul>
-</li>
 <li><a href="#message-signing">Message Signing</a>
 <ul>
 <li><a href="#algorithms">Algorithms</a></li>
@@ -1149,8 +1191,15 @@ indicate so via link to the extension spec.</p>
 <li><a href="#reference-implementation">Reference Implementation</a></li>
 <li><a href="#future-proofing">Future-Proofing</a>
 <ul>
+<li><a href="#versioning">Versioning</a></li>
 <li><a href="#extensions">Extensions</a></li>
-<li><a href="#encoding">Encoding</a></li>
+<li><a href="#future-work">Future Work</a>
+<ul>
+<li><a href="#additional-encodings">Additional Encodings</a></li>
+</ul>
+</li>
+<li><a href="#beyond-messaging">Beyond Messaging</a></li>
+<li><a href="#post-quantum-crypto">Post-Quantum Crypto</a></li>
 </ul>
 </li>
 <li><a href="#references">References</a></li>
