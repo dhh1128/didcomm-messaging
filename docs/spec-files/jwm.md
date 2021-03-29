@@ -1,3 +1,5 @@
+> Note: This file has served as a reference, but is not part of the compiled spec. Any changes to this document should also be made to a file that is included in the compiled spec.
+
 # DIDComm Messaging
 
 DIDComm messaging, is a secure messaging protocol built atop of [decentralized identifiers](https://w3c.github.io/did-core/). DIDComm messages are JSON based leveraging the secure messaging format of JWM (JSON Web Message) which is a [IETF draft](https://github.com/mattrglobal/jwm) to expand the [JOSE](https://datatracker.ietf.org/group/jose/documents/) (Javascript object signing and encryption) family of specifications for the purposes of secure messaging.
@@ -18,7 +20,7 @@ The following section defines a JWM profile for DIDComm messages. This profile d
 - **reply_to** - OPTIONAL. Reply to. The `reply_to` attribute value MUST be an array of strings where each element is a valid [DID URL](https://w3c.github.io/did-core/#did-url-syntax) without the [Fragment component](https://w3c.github.io/did-core/#fragment) which identifies the recipients of the reply to the message.
 - **created_time** - OPTIONAL. Message Created Time. The `created_time` attribute is used for the sender to express when they created the message.
 - **expires_time** - OPTIONAL. Message Expired Time. The `expires_time` attribute is used for the sender to express when they consider the message to be expired.
-- **thread_id** - OPTIONAL. Identifier for the current protocol's _thread_. The `thread_id` attribute value MUST be equal to the `id` of the message that initiated the protocol. All messages are part of a thread. If `thread_id` is not present, the thread for the message is identified by `id`.
+- **thread_id** - OPTIONAL. Identifier for the current protocol's _thread_. If the `thread_id` is defined, the thread_id MUST be the value given. But if the `thread_id` is not defined, the `thread_id` MUST be implicitly defined as the `id` of the given message and that message MUST be regarded the first message of a new thread.
 - **pthread_id** - OPTIONAL. Identifier for the _parent thread_ from which this one branched off from.
 
 ### Example JWM Message Payload

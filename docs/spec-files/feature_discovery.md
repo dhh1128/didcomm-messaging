@@ -14,6 +14,8 @@ exciting uses of agents are more dynamic and unpredictable. When
 Alice and Bob meet, they won't know in advance which features are
 supported by one another's agents. They need a way to find out.
 
+Disclosing features in this manner has a significant privacy benefit over endpoint disclosures contained in a DID Document published to a Verifiable Data Registry (VDR). Using the single DIDComm endpoint published in the document and this protocol, features can be selectively disclosed to other parties at the owner's discretion. The problem of anonymous scanning and fingerprinting enabled with VDR disclosures is solved in a privacy preserving way.
+
 ### Reference
 
 This RFC introduces a protocol for discussing the protocols an agent
@@ -33,7 +35,7 @@ supports, and the responder answers. Each role uses a single message type.
 This is a classic two-step request~response interaction, so it uses the
 predefined state machines for any `requester` and `responder`:
 
-[![state machines](state-machines.png)](https://docs.google.com/spreadsheets/d/1smY8qhG1qqGs0NH9g2hV4b7mDqrM6MIsmNI93tor2qk/edit)
+[![state machines](../collateral/routing-state-machines.png)](https://docs.google.com/spreadsheets/d/1smY8qhG1qqGs0NH9g2hV4b7mDqrM6MIsmNI93tor2qk/edit)
 
 #### Messages
 
